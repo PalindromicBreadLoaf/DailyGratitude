@@ -1,6 +1,9 @@
 package com.breadloaf.dailygratitude
 
 import android.os.Bundle
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -51,13 +54,17 @@ fun DailyGratitudeApp() {
                 value = uiState.entries.getOrElse(i) { "" },
                 onValueChange = { viewModel.updateEntry(i, it) },
                 label = { Text("Thing ${i + 1}") },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
             )
         }
 
         Button(
             onClick = { coroutineScope.launch { viewModel.saveEntries() } },
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
         ) {
             Text("Save")
         }
@@ -68,7 +75,9 @@ fun DailyGratitudeApp() {
 fun DropdownMenu(selectedDate: String, dates: List<String>, onDateSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .padding(vertical = 8.dp)) {
         Button(onClick = { expanded = true }) {
             Text(text = selectedDate)
         }
@@ -85,10 +94,10 @@ fun DropdownMenu(selectedDate: String, dates: List<String>, onDateSelected: (Str
     }
 }
 
-class GratitudeViewModel : ViewModel() {
+class GratitudeViewModel(application: Application) : AndroidViewModel(application) {
+    private val sharedPreferences = application.getSharedPreferences("gratitude_prefs", Context.MODE_PRIVATE)
     private val _uiState = mutableStateOf(GratitudeUiState())
     val uiState: State<GratitudeUiState> = _uiState
-    private val savedEntries = mutableMapOf<String, List<String>>()
 
     fun updateEntry(index: Int, text: String) {
         _uiState.value = _uiState.value.copy(entries = _uiState.value.entries.toMutableList().apply {
@@ -98,16 +107,23 @@ class GratitudeViewModel : ViewModel() {
 
     fun saveEntries() {
         val currentDate = getCurrentDate()
-        savedEntries[currentDate] = _uiState.value.entries.toList()
+        val editor = sharedPreferences.edit()
+        editor.putString(currentDate, _uiState.value.entries.joinToString("||"))
+        editor.apply()
+
         _uiState.value = GratitudeUiState(entries = List(5) { "" })
     }
 
     fun loadEntries(date: String) {
-        _uiState.value = GratitudeUiState(entries = savedEntries[date] ?: List(5) { "" })
+        val savedData = sharedPreferences.getString(date, null)
+        val entries = savedData?.split("||")?.map { it.ifEmpty { "" } } ?: List(5) { "" }
+
+        _uiState.value = GratitudeUiState(entries = emptyList())
+        _uiState.value = GratitudeUiState(entries = entries)
     }
 
     fun getSavedDates(): List<String> {
-        return savedEntries.keys.toList()
+        return sharedPreferences.all.keys.toList().sortedDescending()
     }
 
     fun getCurrentDate(): String {
