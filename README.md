@@ -20,7 +20,7 @@ A simple Android app that allows users to write and save five things they are gr
 ## TODOS
 - **Dark Mode Support**
 - **Cloud Syncing for Cross-Device Access**
-- **Export/Share Gratitude Entries**
+- **Export/Backup Entries**
 - **Reminders & Notifications**
 
 ## License
